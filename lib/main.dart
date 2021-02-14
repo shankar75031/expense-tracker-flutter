@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+
 import './widgets/chart.dart';
 import './models/transaction.dart';
 import './widgets/new_transaction.dart';
@@ -5,6 +7,9 @@ import './widgets/transaction_list.dart';
 import 'package:flutter/material.dart';
 
 void main() {
+  // Uncomment to lock in portrait mode
+  SystemChrome.setPreferredOrientations(
+      [DeviceOrientation.portraitUp, DeviceOrientation.portraitUp]);
   runApp(MyApp());
 }
 
@@ -49,6 +54,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  bool _showChart = false;
+
   final List<Transaction> _userTransactions = [];
 
   List<Transaction> get _groupedTransactions {
@@ -95,27 +102,73 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.add,
-            ),
-            onPressed: () => _startAddNewTransaction(context),
+    final mediaQuery = MediaQuery.of(context);
+    final isLandscape = mediaQuery.orientation == Orientation.landscape;
+    final appBar = AppBar(
+      actions: [
+        IconButton(
+          icon: Icon(
+            Icons.add,
           ),
-        ],
-        title: Text(
-          'Expense Manager',
-          style: TextStyle(fontFamily: 'OpenSans'),
+          onPressed: () => _startAddNewTransaction(context),
         ),
+      ],
+      title: Text(
+        'Expense Manager',
+        style: TextStyle(fontFamily: 'OpenSans'),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Chart(_groupedTransactions),
-          TransactionList(_userTransactions, _deleteTransaction),
-        ],
+    );
+
+    final expenseListWidget = Container(
+      height: (mediaQuery.size.height -
+              appBar.preferredSize.height -
+              mediaQuery.padding.top) *
+          0.7,
+      child: TransactionList(_userTransactions, _deleteTransaction),
+    );
+
+    return Scaffold(
+      appBar: appBar,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (isLandscape)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Show Chart'),
+                  Switch(
+                    value: _showChart,
+                    onChanged: (val) {
+                      setState(() {
+                        _showChart = val;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            if (!isLandscape)
+              Container(
+                height: (mediaQuery.size.height -
+                        appBar.preferredSize.height -
+                        mediaQuery.padding.top) *
+                    0.3,
+                child: Chart(_groupedTransactions),
+              ),
+            if (!isLandscape) expenseListWidget,
+            if (isLandscape)
+              _showChart
+                  ? Container(
+                      height: (mediaQuery.size.height -
+                              appBar.preferredSize.height -
+                              mediaQuery.padding.top) *
+                          0.7,
+                      child: Chart(_groupedTransactions),
+                    )
+                  : expenseListWidget
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         child: Icon(
